@@ -11,6 +11,31 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import pickle
 
+# Set page configuration
+st.set_page_config(page_title="Biomedical ML Model Trainer and Predictor", layout="wide")
+
+# Custom CSS for colors
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #f5f5f5;
+    }
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+    }
+    .stSelectbox>div>div {
+        color: black;
+    }
+    .sidebar .sidebar-content {
+        background-color: #e8e8e8;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Function to load the dataset
 def load_dataset(uploaded_file):
     if uploaded_file is not None:
@@ -37,6 +62,10 @@ def train_model(df, target, model_name, params, selected_columns):
     X = df[selected_columns]
     y = df[target].values.ravel()  # Ensure y is a 1-dimensional array
 
+    # Check if target is categorical
+    if pd.api.types.is_numeric_dtype(df[target]):
+        raise ValueError("Target column must be categorical for classification models.")
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
     
     preprocessor, feature_names = preprocess_dataset(df, selected_columns)
@@ -51,7 +80,7 @@ def train_model(df, target, model_name, params, selected_columns):
                                 ('classifier', LogisticRegression(max_iter=params['max_iter']))])
         param_grid = {'classifier__C': params['C']}
 
-    grid_search = GridSearchCV(model, param_grid=param_grid, cv=5, scoring='accuracy')
+    grid_search = GridSearchCV(model, param_grid=param_grid, cv=5, scoring='accuracy', error_score='raise')
     grid_search.fit(X_train, y_train)
     best_model = grid_search.best_estimator_
     
@@ -131,20 +160,34 @@ def plot_correlation_matrix(df, selected_columns):
     plt.title('Correlation Matrix')
     st.pyplot(plt)
 
-# Streamlit app layout
-st.set_page_config(page_title="Biomedical ML Model Trainer and Predictor", layout="wide")
+# Sidebar navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.selectbox("Choose a page", ["Home", "Upload Dataset", "Train Model", "Make Prediction"])
 
-# Display the image as a small logo in the header
+# Display the image as a small logo in the sidebar
 image_path = r"C:\Users\hp\Desktop\master\S2\Instrumentation et qualité de maintenance\Makram\FMPM_logo.jpg"
-st.sidebar.image(image_path, width=150)
+if page == "Home":
+    st.image(image_path, use_column_width=True)
+    st.title("Welcome to the Biomedical ML Model Trainer and Predictor")
+    st.markdown("""
+    ## Overview
+    This application allows you to upload a biomedical dataset, train machine learning models (KNN and Logistic Regression), and make predictions.
+    
+    Use the sidebar to navigate between the different functionalities:
+    - **Upload Dataset:** Upload your dataset and visualize the correlation matrix.
+    - **Train Model:** Train a machine learning model on your dataset.
+    - **Make Prediction:** Make predictions using the trained model.
+    
+    ## Team Members
+    - ASMAE ESSALAMI
+    - DOUNIA BEN DAOUD
+    - NOUHAYLA EL KARICH
+    - IMANE EL BOURTIAA
+    
+    ### © 2024 IABM - Biomedical ML Model team.
+    """)
 
-st.title("Biomedical ML Model Trainer and Predictor")
-st.markdown("<style>body {background-color: #f0f2f6;}</style>", unsafe_allow_html=True)
-
-st.sidebar.title("Options")
-option = st.sidebar.selectbox("Choose an option", ["Upload Dataset", "Train Model", "Make Prediction"])
-
-if option == "Upload Dataset":
+elif page == "Upload Dataset":
     st.header("Upload Dataset")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
@@ -155,7 +198,7 @@ if option == "Upload Dataset":
         if st.button("Show Correlation Matrix"):
             plot_correlation_matrix(df, selected_columns)
 
-if option == "Train Model":
+elif page == "Train Model":
     st.header("Train Model")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     if uploaded_file is not None:
@@ -172,7 +215,7 @@ if option == "Train Model":
             params = {"n_neighbors": [n_neighbors]}
         elif model_name == "Logistic Regression":
             C = st.slider("Inverse of regularization strength (C)", 0.01, 10.0, 1.0)
-            max_iter = st.slider("Maximum number of iterations", 100, 1000, 300)
+            max_iter = st.slider("Maximum iterations", 100, 1000, 200)
             params = {"C": [C], "max_iter": max_iter}
 
         if st.button("Train Model"):
@@ -189,7 +232,7 @@ if option == "Train Model":
             st.write("Classification Report:")
             st.text(class_report)
 
-if option == "Make Prediction":
+elif page == "Make Prediction":
     st.header("Make Prediction")
     uploaded_file = st.file_uploader("Choose a CSV file for prediction", type="csv")
     if uploaded_file is not None:
@@ -200,12 +243,3 @@ if option == "Make Prediction":
         if st.button("Predict"):
             prediction = make_prediction(input_data)
             st.write("Prediction for selected rows:", prediction)
-
-# Team members and copyright information
-st.sidebar.markdown("---")
-st.sidebar.markdown("## Team Members")
-st.sidebar.markdown("ASMAE ESSALAMI")
-st.sidebar.markdown("DOUNIA BEN DAOUD")
-st.sidebar.markdown("NOUHAYLA EL KARICH")
-st.sidebar.markdown("IMANE EL BOURTIAA")
-st.sidebar.markdown("### © 2024 IABM - Biomedical ML Model team.")
