@@ -149,9 +149,6 @@ def validate_model(df, target, model_name, params, selected_columns):
 
     return cross_val_scores.mean(), cross_val_scores.std()
 
-import pandas as pd
-import pickle
-
 def make_prediction(input_data):
     with open('trained_model.pkl', 'rb') as f:
         model = pickle.load(f)
